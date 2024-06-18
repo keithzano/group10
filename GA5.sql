@@ -1,11 +1,11 @@
 -- Drop the database if it exists
-DROP DATABASE IF EXISTS group102;
-CREATE DATABASE group102;
-USE group102;
+DROP DATABASE IF EXISTS group10;
+CREATE DATABASE group10;
+USE group10;
 
 -- Patients Table
-DROP TABLE IF EXISTS patient;
-CREATE TABLE patient(
+DROP TABLE IF EXISTS pomba_patient;
+CREATE TABLE pomba_patient(
     patientID INT(5) AUTO_INCREMENT PRIMARY KEY,
     patientName VARCHAR(150),
     patientDOB DATE,
@@ -24,14 +24,14 @@ CREATE PROCEDURE insert_patient(
     IN Address VARCHAR(255)
 )
 BEGIN
-    INSERT INTO patient (patientName, patientDOB, patientPhone, patientAddress) 
+    INSERT INTO pomba_patient (patientName, patientDOB, patientPhone, patientAddress) 
     VALUES (Name, DOB, Phone, Address);
 END //
 DELIMITER ;
 
 -- Doctors Table
-DROP TABLE IF EXISTS doctor;
-CREATE TABLE doctor(
+DROP TABLE IF EXISTS zano_doctor;
+CREATE TABLE zano_doctor(
     doctorsMedicalLicense INT(5) AUTO_INCREMENT PRIMARY KEY,
     doctorsName VARCHAR(150),
     doctorsGender ENUM('M','F'),
@@ -50,14 +50,14 @@ CREATE PROCEDURE insert_doctor(
     IN Qualification VARCHAR(150)
 )
 BEGIN
-    INSERT INTO doctor (doctorsName, doctorsGender, doctorsPhone, doctorsQualification) 
+    INSERT INTO zano_doctor (doctorsName, doctorsGender, doctorsPhone, doctorsQualification) 
     VALUES (Name, Gender, Phone, Qualification);
 END //
 DELIMITER ;
 
 -- Rooms Table
-DROP TABLE IF EXISTS room;
-CREATE TABLE room(
+DROP TABLE IF EXISTS masela_room;
+CREATE TABLE masela_room(
     roomNumber VARCHAR(5) PRIMARY KEY,
     bedCount INT,
     currentOccupancy INT DEFAULT 0,
@@ -74,23 +74,23 @@ CREATE PROCEDURE insert_room(
     IN room_type ENUM('General', 'Private', 'ICU')
 )
 BEGIN
-    INSERT INTO room (roomNumber, bedCount, roomType) 
+    INSERT INTO masela_room (roomNumber, bedCount, roomType) 
     VALUES (room_number, bed_count, room_type);
 END //
 DELIMITER ;
 
 -- Admissions Table
-DROP TABLE IF EXISTS admission;
-CREATE TABLE admission(
+DROP TABLE IF EXISTS moyikwa_admission;
+CREATE TABLE moyikwa_admission(
     patientID INT(5),
     doctorsID INT(5),
     roomNumber VARCHAR(5),
     severityOfCondition ENUM('Mild', 'Moderate', 'Severe', 'Critical'),
     admissionDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (patientID, doctorsID),
-    FOREIGN KEY (patientID) REFERENCES patient(patientID),
-    FOREIGN KEY (doctorsID) REFERENCES doctor(doctorsMedicalLicense),
-    FOREIGN KEY (roomNumber) REFERENCES room(roomNumber)
+    FOREIGN KEY (patientID) REFERENCES pomba_patient(patientID),
+    FOREIGN KEY (doctorsID) REFERENCES zano_doctor(doctorsMedicalLicense),
+    FOREIGN KEY (roomNumber) REFERENCES masela_room(roomNumber)
 );
 
 -- Procedure to admit patient
@@ -103,21 +103,21 @@ CREATE PROCEDURE admit_patient(
     IN pcondition ENUM('Mild', 'Moderate', 'Severe', 'Critical')
 )
 BEGIN
-    INSERT INTO admission (patientID, doctorsID, roomNumber, severityOfCondition) 
+    INSERT INTO moyikwa_admission (patientID, doctorsID, roomNumber, severityOfCondition) 
     VALUES (patients, doctors, room, pcondition);
 END //
 DELIMITER ;
 
 -- Prescription Table
-DROP TABLE IF EXISTS prescription;
-CREATE TABLE prescription(
+DROP TABLE IF EXISTS keith_prescription;
+CREATE TABLE keith_prescription(
     prescriptionID INT(5) AUTO_INCREMENT PRIMARY KEY,
     patientID INT(5),
     doctorsID INT(5),
     medicationName VARCHAR(150),
     startDate DATE,
-    FOREIGN KEY (patientID) REFERENCES patient(patientID),
-    FOREIGN KEY (doctorsID) REFERENCES doctor(doctorsMedicalLicense)
+    FOREIGN KEY (patientID) REFERENCES pomba_patient(patientID),
+    FOREIGN KEY (doctorsID) REFERENCES zano_doctor(doctorsMedicalLicense)
 )
 AUTO_INCREMENT = 40000;
 
@@ -131,7 +131,7 @@ CREATE PROCEDURE insert_prescription(
     IN date DATE
 )
 BEGIN
-    INSERT INTO prescription (patientID, doctorsID, medicationName, startDate) 
+    INSERT INTO keith_prescription (patientID, doctorsID, medicationName, startDate) 
     VALUES (patient, doctor, medication, date);
 END //
 DELIMITER ;
@@ -141,7 +141,7 @@ DELIMITER //
 
 DROP TRIGGER IF EXISTS update_room_status_on_admission_insert//
 CREATE TRIGGER update_room_status_on_admission_insert
-AFTER INSERT ON admission
+AFTER INSERT ON moyikwa_admission
 FOR EACH ROW
 BEGIN
     DECLARE patient_count INT;
@@ -149,7 +149,7 @@ BEGIN
     DECLARE room_bed_count INT;
     
     -- Count the number of patients assigned to the doctor
-    SELECT COUNT(*) INTO patient_count FROM admission WHERE doctorsID = NEW.doctorsID;
+    SELECT COUNT(*) INTO patient_count FROM moyikwa_admission WHERE doctorsID = NEW.doctorsID;
     
     -- Check if doctor has more than 2 patients
     IF patient_count > 2 THEN
@@ -175,7 +175,7 @@ END //
 
 DROP TRIGGER IF EXISTS update_room_status_on_admission_delete//
 CREATE TRIGGER update_room_status_on_admission_delete
-BEFORE DELETE ON admission
+BEFORE DELETE ON moyikwa_admission
 FOR EACH ROW
 BEGIN
     DECLARE room_occupancy INT;

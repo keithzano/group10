@@ -192,6 +192,32 @@ BEGIN
         UPDATE masela_room SET currentOccupancy = currentOccupancy - 1 WHERE roomNumber = OLD.roomNumber;
     END IF;
 END //
+DELIMITER ; 
+
+DELIMITER //
+-- Function to get the patient name and calculate there age
+DROP FUNCTION IF EXISTS get_patient_name_and_age//
+CREATE FUNCTION get_patient_name_and_age(p_patientID INT)
+RETURNS VARCHAR(255)
+DETERMINISTIC
+BEGIN
+    DECLARE p_name VARCHAR(150);
+    DECLARE p_dob DATE;
+    DECLARE p_age INT;
+    DECLARE result VARCHAR(255);
+
+    -- Select the patient name and DOB
+    SELECT patientName, patientDOB INTO p_name, p_dob
+    FROM pomba_patient
+    WHERE patientID = p_patientID;
+
+    -- Calculate the age using TIMESTAMPDIFF
+    SET p_age = TIMESTAMPDIFF(YEAR, p_dob, CURDATE());
+
+    -- Concatenate the result
+    SET result = CONCAT('Name: ', p_name, ', Age: ', p_age);
+
+    RETURN result;
+END // 
 
 DELIMITER ;
-

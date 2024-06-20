@@ -221,3 +221,50 @@ BEGIN
 END // 
 
 DELIMITER ;
+
+
+-- Procedure to update patient condition from Critical to Severe
+DELIMITER //
+DROP PROCEDURE IF EXISTS UpdateCriticalPatients;
+CREATE PROCEDURE UpdateCriticalPatients()
+BEGIN
+    DECLARE done INT DEFAULT FALSE;
+    DECLARE pID INT;
+    DECLARE pName VARCHAR(150);
+
+    -- Cursor to fetch patients with Critical condition from moyikwa_admission
+    DECLARE patient_cursor CURSOR FOR 
+        SELECT p.patientID, p.patientName
+        FROM pomba_patient p
+        JOIN moyikwa_admission a ON p.patientID = a.patientID
+        WHERE a.severityOfCondition = 'Critical';
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+    OPEN patient_cursor;
+
+    read_loop: LOOP
+        FETCH patient_cursor INTO pID, pName;
+        IF done THEN
+            LEAVE read_loop;
+        END IF;
+
+        -- Update condition to Severe
+        UPDATE moyikwa_admission
+        SET severityOfCondition = 'Severe'
+        WHERE patientID = pID AND severityOfCondition = 'Critical';
+
+        SELECT CONCAT('Updated patient ', pName, ' (ID: ', pID, ') condition from Critical to Severe');
+    END LOOP;
+
+    CLOSE patient_cursor;
+END //
+
+DELIMITER ;
+
+
+DROP EVENT IF EXISTS UpdateCriticalPatientsEvent;
+CREATE EVENT UpdateCriticalPatientsEvent
+    ON SCHEDULE EVERY 60 SECOND
+    DO
+        CALL UpdateCriticalPatients();
